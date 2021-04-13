@@ -28,12 +28,19 @@ abstract class Vendedor {
   fun otrasCertificaciones() = certificaciones.count { !it.esDeProducto }
 
   fun puntajeCertificaciones() = certificaciones.sumBy { c -> c.puntaje }
+
+  abstract fun esInfluyente():Boolean
+  fun esGenerico() = certificaciones.any { v -> !v.esDeProducto }
 }
 
 // En los parámetros, es obligatorio poner el tipo
 class VendedorFijo(val ciudadOrigen: Ciudad) : Vendedor() {
   override fun puedeTrabajarEn(ciudad: Ciudad): Boolean {
     return ciudad == ciudadOrigen
+  }
+
+  override fun esInfluyente(): Boolean {
+    return false
   }
 }
 
@@ -42,10 +49,39 @@ class Viajante(val provinciasHabilitadas: List<Provincia>) : Vendedor() {
   override fun puedeTrabajarEn(ciudad: Ciudad): Boolean {
     return provinciasHabilitadas.contains(ciudad.provincia)
   }
+  override fun esInfluyente(): Boolean {
+    return provinciasHabilitadas.sumBy { p -> p.poblacion } >= 10000000
+  }
 }
 
 class ComercioCorresponsal(val ciudades: List<Ciudad>) : Vendedor() {
   override fun puedeTrabajarEn(ciudad: Ciudad): Boolean {
     return ciudades.contains(ciudad)
   }
+  override fun esInfluyente(): Boolean {
+    return (ciudades.size >= 5) or (this.provincias().size >= 3)
+  }
+  fun provincias() = ciudades.map { c -> c.provincia }.toSet()
+}
+//en el centro el arg ciudad se para por parametro, pero vendedores no
+class CentroDistribucion(val ciudad: Ciudad) {
+  val vendedores = mutableListOf<Vendedor>()
+  fun agregarVendedor(vendedor: Vendedor) {
+    if (vendedores.contains(vendedor)) {
+      throw Exception("El vendedor ya está registrado")
+    } else {
+      vendedores.add(vendedor)
+    }
+  }
+
+  fun vendedorEstrella(): Vendedor? {
+    return vendedores.maxBy { v -> v.puntajeCertificaciones() }
+  }
+
+  fun puedeCubrir(ciudad: Ciudad):Boolean {
+    return vendedores.any { v -> v.puedeTrabajarEn(ciudad) }
+  }
+
+  fun vendedoresGenericos() = vendedores.filter { v -> v.esGenerico() }
+  fun esRobusto() = vendedores.count { v -> v.esFirme() } >= 3
 }
